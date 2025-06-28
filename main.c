@@ -1,3 +1,4 @@
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -31,25 +32,50 @@ void log_message(const char *message) {
 }
 
 int main() {
-  // 'fopen' with write mode "w" clears the file; 'fclose' immediately
-  // closes it. The end result is an empty solbot-lsp.log file on each launch.
-  fclose(fopen("/tmp/solbot-lsp.log", "w")); 
+  fclose(fopen("/tmp/solbot-lsp.log", "w"));
   log_message("--- Solbot LSP Started ---");
 
   char line_buffer[1024];
   char *separator = "\r\n";
+  uint64_t content_length;
 
   while (1) {
-    if (fgets(line_buffer, sizeof(line_buffer), stdin) == NULL) {
-      break;
+
+    // --- Header Part ---
+
+    while (fgets(line_buffer, sizeof(line_buffer), stdin) != NULL) {
+      if (strncmp(line_buffer, "Content-Length: ", 16) == 0) {
+        log_message(line_buffer);
+        sscanf(line_buffer + 16, "%ld", &content_length);
+        char content_len_log[50];
+        sprintf(content_len_log, "Found content section length: %ld",
+                content_length);
+        log_message(content_len_log);
+      }
+
+      if (strcmp(line_buffer, separator) == 0) {
+        log_message("--- Headers Received ---");
+        break;
+      }
     }
 
-    log_message(line_buffer);
-
-    if (strcmp(line_buffer, separator) == 0) {
-      log_message("Found the end of header section");
-      break;
+    if (content_length == 0) {
+      log_message("Content section length in the header is 0.");
+      return 1;
     }
+
+    // --- Content Part
+
+    char content_buffer[content_length + 1];
+    if (fgets(content_buffer, sizeof(content_buffer), stdin) == NULL) {
+      log_message("Content length in header was non-zero, but could not read "
+                  "content section");
+      return 1;
+    }
+
+    log_message(content_buffer);
+
+    log_message("--- Content Received ---");
   }
 
   return 0;
