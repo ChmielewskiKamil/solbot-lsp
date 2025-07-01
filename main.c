@@ -1,5 +1,8 @@
+#include <inttypes.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 /**
@@ -35,20 +38,20 @@ int main() {
   fclose(fopen("/tmp/solbot-lsp.log", "w"));
   log_message("--- Solbot LSP Started ---");
 
-  char line_buffer[1024];
   char *separator = "\r\n";
-  uint64_t content_length;
+  char line_buffer[1024];
 
   while (1) {
+    uint32_t content_length = 0; // Reset for each message
 
     // --- Header Part ---
 
     while (fgets(line_buffer, sizeof(line_buffer), stdin) != NULL) {
       if (strncmp(line_buffer, "Content-Length: ", 16) == 0) {
         log_message(line_buffer);
-        sscanf(line_buffer + 16, "%ld", &content_length);
+        sscanf(line_buffer + 16, "%" PRIu32, &content_length);
         char content_len_log[50];
-        sprintf(content_len_log, "Found content section length: %ld",
+        sprintf(content_len_log, "Found content section length: %" PRIu32,
                 content_length);
         log_message(content_len_log);
       }
@@ -66,16 +69,28 @@ int main() {
 
     // --- Content Part
 
-    char content_buffer[content_length + 1];
-    if (fgets(content_buffer, sizeof(content_buffer), stdin) == NULL) {
-      log_message("Content length in header was non-zero, but could not read "
-                  "content section");
+    char *content_buffer = malloc(content_length + 1);
+    if (content_buffer == NULL) {
+      log_message("[Error] Could not allocate memory for content buffer.");
       return 1;
     }
+
+    size_t bytes_read =
+        fread(content_buffer, sizeof(char), content_length, stdin);
+
+    if (bytes_read != content_length) {
+      log_message("[Error] Could not read full message body.");
+      free(content_buffer);
+      return 1;
+    }
+
+    content_buffer[content_length] = '\0'; // 'fread' does not null-terminate
 
     log_message(content_buffer);
 
     log_message("--- Content Received ---");
+
+    free(content_buffer);
   }
 
   return 0;
