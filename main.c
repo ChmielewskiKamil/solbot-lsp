@@ -36,7 +36,7 @@ void log_message(const char *message) {
 
 int main() {
   fclose(fopen("/tmp/solbot-lsp.log", "w"));
-  log_message("--- Solbot LSP Started ---");
+  log_message("[Info] --- Solbot LSP Started ---");
 
   char *separator = "\r\n";
   char line_buffer[1024];
@@ -48,22 +48,23 @@ int main() {
 
     while (fgets(line_buffer, sizeof(line_buffer), stdin) != NULL) {
       if (strncmp(line_buffer, "Content-Length: ", 16) == 0) {
-        log_message(line_buffer);
         sscanf(line_buffer + 16, "%" PRIu32, &content_length);
-        char content_len_log[50];
-        sprintf(content_len_log, "Found content section length: %" PRIu32,
+        char content_len_log[70];
+        sprintf(content_len_log,
+                "[Info] Found content section length header; len: %" PRIu32,
                 content_length);
         log_message(content_len_log);
       }
 
       if (strcmp(line_buffer, separator) == 0) {
-        log_message("--- Headers Received ---");
+        log_message("[Info] --- Headers Received ---");
         break;
       }
     }
 
     if (content_length == 0) {
-      log_message("Content section length in the header is 0.");
+      // TODO: Can client -> server notifications have 0 length?
+      log_message("[Info] Content section length in the header is 0.");
       return 1;
     }
 
@@ -87,8 +88,24 @@ int main() {
     content_buffer[content_length] = '\0'; // 'fread' does not null-terminate
 
     log_message(content_buffer);
+    log_message("[Info] --- Content Received ---");
 
-    log_message("--- Content Received ---");
+    if (strstr(content_buffer, "\"method\":\"initialize\"") != NULL) {
+      const char *response = "{"
+                             "\"jsonrpc\": \"2.0\","
+                             "\"id\": 1,"
+                             "\"result\": {"
+                             "  \"capabilities\": {}"
+                             "}"
+                             "}";
+
+      printf("Content-Length: %zu\r\n", strlen(response));
+      printf("\r\n");
+      printf("%s", response);
+      fflush(stdout);
+
+      log_message("[Info] --- Sent 'initialize' Response ---");
+    }
 
     free(content_buffer);
   }
