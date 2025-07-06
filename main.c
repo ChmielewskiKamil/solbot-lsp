@@ -107,6 +107,24 @@ int main() {
       log_message("[Info] --- Sent 'initialize' Response ---");
     }
 
+    if (strstr(content_buffer, "\"method\":\"shutdown\"") != NULL) {
+      const char *response = "{"
+                             "\"jsonrpc\": \"2.0\","
+                             "\"id\": 2,"
+                             "\"result\":null"
+                             "}";
+
+      printf("Content-Length: %zu\r\n", strlen(response));
+      printf("\r\n");
+      printf("%s", response);
+      fflush(stdout);
+    }
+
+    if (strstr(content_buffer, "\"method\":\"exit\"") != NULL) {
+      free(content_buffer);
+      return 0;
+    }
+
     free(content_buffer);
   }
 
