@@ -40,25 +40,16 @@ Lexer *lexer_new(const char *input_buffer) {
   return lexer;
 }
 
-Token *token_new(TokenType type, const char *literal, size_t literal_len) {
+Token *token_new(TokenType type, const char *literal_start,
+                 size_t literal_length) {
   Token *token = malloc(sizeof(*token));
   if (token == NULL) {
     return NULL;
   }
 
   token->type = type;
-
-  // TODO: Instead of allocating memory for each literal this could be a 'view'
-  // into the original input string. This would require changing the Token
-  // struct by tracking start and len.
-  token->literal = malloc(literal_len + 1);
-  if (token->literal == NULL) {
-    free(token);
-    return NULL;
-  }
-
-  strncpy(token->literal, literal, literal_len);
-  token->literal[literal_len] = '\0';
+  token->literal_start = literal_start;
+  token->literal_length = literal_length;
 
   return token;
 }

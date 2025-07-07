@@ -1,6 +1,7 @@
 #ifndef JSON_LEXER_H
 #define JSON_LEXER_H
 
+#include <stddef.h>
 #include <stdint.h>
 typedef enum {
   TOKEN_ILLEGAL, // unknown/illegal character
@@ -24,7 +25,8 @@ typedef enum {
 
 typedef struct {
   TokenType type;
-  char *literal;
+  const char *literal_start;
+  size_t literal_length;
 } Token;
 
 typedef struct {
