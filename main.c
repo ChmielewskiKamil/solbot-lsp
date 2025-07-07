@@ -1,9 +1,20 @@
+// --- Standard Headers ---
+
 #include <inttypes.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+// --- Project Headers ---
+
+#include "json/parser.h" // For parse_request(...)
+
+// --- Unity Build ---
+
+#include "json/lexer.c"
+#include "json/parser.c"
 
 /**
  * Safely appends a single message to the persistent LSP log file.
@@ -26,6 +37,9 @@
  * would risk losing recent logs in a crash.
  */
 void log_message(const char *message) {
+  // TODO: Move this function to logger.h and logger.c so that it can be
+  // accessed from any file.
+
   FILE *log_file = fopen("/tmp/solbot-lsp.log", "a"); // 'a' - append mode
   if (log_file != NULL) {
     fputs(message, log_file);
@@ -89,6 +103,13 @@ int main() {
 
     log_message(content_buffer);
     log_message("[Info] --- Content Received ---");
+
+    RequestMessage *request = parser_parse_request_message(content_buffer);
+    if (request == NULL) {
+      log_message("The parsed request message is NULL");
+      free(content_buffer);
+      return 1;
+    }
 
     if (strstr(content_buffer, "\"method\":\"initialize\"") != NULL) {
       const char *response = "{"
