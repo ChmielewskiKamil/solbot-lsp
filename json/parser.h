@@ -3,14 +3,6 @@
 
 #include <stdint.h>
 
-#include "lexer.h"
-
-typedef struct {
-  Lexer *lexer;
-  Token *tkn_current;
-  Token *tkn_peek;
-} Parser;
-
 typedef enum {
   M_INITIALIZE, // LSP: 'initialize'
   M_SHUTDOWN,   // LSP: 'shutdown'
@@ -25,7 +17,6 @@ typedef struct {
   void *params;
 } RequestMessage;
 
-Parser *parser_new(const char *input_buffer);
 RequestMessage *parser_parse_request_message(const char *request_buffer);
 
 #endif // JSON_PARSER_H
