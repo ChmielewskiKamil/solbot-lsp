@@ -1,1 +1,6 @@
+# Result of 'nix build'
 result
+# Result of 'make'
+solbot-lsp
+# Result of 'make test'
+test-runner

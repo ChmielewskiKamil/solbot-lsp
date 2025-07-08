@@ -1,65 +1,100 @@
 {
-  description = "A minimal C project starter using the Clang toolchain";
+  description = "A C-based Solidity Language Server";
 
-  # 1. Inputs: We only need nixpkgs.
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    flake-utils.url = "github:numtide/flake-utils";
   };
 
-  # 2. Outputs: We define what this flake provides.
-  # You can find your system by running: nix eval --raw nixpkgs#system
-  outputs = { self, nixpkgs }: let
-    # We explicitly target one system to keep it minimal.
-    system = "x86_64-linux";
-    pkgs = nixpkgs.legacyPackages.${system};
-    appName = "solbot-lsp";
+  outputs = { self, nixpkgs, flake-utils }:
+    flake-utils.lib.eachDefaultSystem (system:
+      let
+        pkgs = nixpkgs.legacyPackages.${system};
+        appName = "solbot-lsp";
 
-    # Get the latest LLVM/Clang package set from nixpkgs.
-    # This gives us access to clang, clangd, lldb, etc.
-    llvm = pkgs.llvmPackages_latest;
-  in {
+        # ----------------------------------------------------------------------
+        #  Development Compiler Flags (Strict + Sanitizers)
+        # ----------------------------------------------------------------------
+        # These flags are used in the `devShell` for catching errors early.
+        devBuildFlags = [
+          "-std=c99"           # Use the C99 standard
+          "-Wall"              # Enable all standard warnings
+          "-Wextra"            # Enable extra warnings
+          "-Wpedantic"         # Enforce strict ISO C compliance
+          "-Wshadow"           # Warn when a variable shadows another
+          "-Wformat=2"         # Stricter printf/scanf format checks
+          "-Wconversion"       # Warn about potentially problematic type conversions
+          # "-Werror"          # Uncomment to treat all warnings as errors
 
-    # 3. Package: How to build your program using Clang.
-    packages.${system}.default = pkgs.clangStdenv.mkDerivation {
-      pname = appName;
-      version = "0.1.0";
-      src = ./.; # The source code is the current directory.
+          # --- Memory Debugging ---
+          "-g"                           # Generate debug symbols
+          "-fsanitize=address"           # Enable AddressSanitizer (ASan) for memory errors
+          "-fno-omit-frame-pointer"      # Improves stack traces with sanitizers
+        ];
 
-      # buildInputs are not needed here, because clangStdenv automatically
-      # provides the clang compiler.
+        # ----------------------------------------------------------------------
+        #  Production Compiler Flags
+        # ----------------------------------------------------------------------
+        # These flags are for the final, optimized package build.
+        # No sanitizers here unless you specifically need them for release debugging.
+        prodBuildFlags = [
+          "-std=c99"
+          "-Wall"
+          "-Wextra"
+          "-Wpedantic"
+          "-Werror" # Treat warnings as errors for production
+          "-O2" # Enable optimizations
+        ];
+      in
+      {
+        # ----------------------------------------------------------------------
+        #  Package Definition (for `nix build`)
+        # ----------------------------------------------------------------------
+        packages.default = pkgs.clangStdenv.mkDerivation {
+          pname = appName;
+          version = "0.1.0";
+          src = ./.;
 
-      # Build phase: A single command to compile main.c
-      buildPhase = ''
-        runHook preBuild
-        # $CC is now the clang compiler because we are using clangStdenv
-        $CC main.c -o ${appName} -g # -g flag adds debug symbols
-        runHook postBuild
-      '';
+          # Set build flags for this package build
+          NIX_CFLAGS_COMPILE = builtins.toString prodBuildFlags;
 
-      # Install phase: Copy the compiled program to the output.
-      installPhase = ''
-        runHook preInstall
-        mkdir -p $out/bin
-        cp ./${appName} $out/bin/
-        runHook postInstall
-      '';
-    };
+          # We use a Makefile, so we need `gnumake`
+          nativeBuildInputs = [ pkgs.gnumake ];
+          
+          # The default phases will run `make` and `make install`
+          # so we don't need to specify `buildPhase` or `installPhase`
+          # as long as our Makefile has `install` target.
+        };
 
-    # 4. Development Shell: The environment you'll work in.
-    devShells.${system}.default = pkgs.mkShell {
-      # These packages will be available in your shell for development.
-      packages = [
-        # This provides the `clang` compiler, `clangd` LSP, `clang-format`, etc.
-        llvm.clang-tools
-        # This provides the `lldb` debugger.
-        llvm.lldb
-      ];
-    };
+        # ----------------------------------------------------------------------
+        #  Development Shell (for `nix develop`)
+        # ----------------------------------------------------------------------
+        devShells.default = pkgs.mkShell {
+          # These packages will be available in the shell
+          buildInputs = with pkgs; [
+            llvmPackages_latest.clang
+            llvmPackages_latest.lldb
+            gnumake           
+            
+            # Runtime dependency for AddressSanitizer
+            llvmPackages_latest.compiler-rt
+          ];
 
-    # 5. App: Makes the package runnable with `nix run`.
-    apps.${system}.default = {
-      type = "app";
-      program = "${self.packages.${system}.default}/bin/${appName}";
-    };
-  };
+          # Set the strict compiler flags for our interactive development session
+          # This is the key for a fast feedback loop.
+          NIX_CFLAGS_COMPILE = builtins.toString devBuildFlags;
+
+          # Let the shell know where to find the ASan runtime library
+          LD_LIBRARY_PATH = "${pkgs.llvmPackages_latest.compiler-rt}/lib";
+        };
+
+        # ----------------------------------------------------------------------
+        #  App Runner (for `nix run`)
+        # ----------------------------------------------------------------------
+        apps.default = {
+          type = "app";
+          program = "${self.packages.${system}.default}/bin/${appName}";
+        };
+      }
+    );
 }
