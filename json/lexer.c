@@ -35,15 +35,20 @@ void lexer_read_char(Lexer *lexer) {
   }
 }
 
-/* This function adances the position of the lexer by the width of the last read
- * character (lexem?). After the position is updated and points at the next
- * lexem to read, it reads it and updates the lexer state. */
+/**
+ * Advances the lexer's position to the next character.
+ *
+ * @param lexer A pointer to the Lexer whose state will be advanced.
+ */
 void lexer_advance(Lexer *lexer) {
   if (lexer->ch != '\0') {
     lexer_read_char(lexer);
     lexer->position += lexer->width;
   }
 }
+
+// TODO: For lexing strings and numbers, we will most likely need the
+// lexer_backup function.
 
 Lexer *lexer_new(const char *input_buffer) {
   Lexer *lexer = NULL;
