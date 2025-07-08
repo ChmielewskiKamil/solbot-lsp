@@ -30,7 +30,7 @@ void lexer_read_char(Lexer *lexer) {
     lexer->ch = '\0';
     lexer->width = 0;
   } else {
-    lexer->ch = *(lexer->position);
+    lexer->ch = (unsigned char)*(lexer->position);
     lexer->width = 1; // TODO: Implement proper UTF-8 decoding.
   }
 }
@@ -102,10 +102,14 @@ Token *lexer_next_token(Lexer *lexer) {
     break;
 
   default:
+    token = token_new(TOKEN_ILLEGAL, lexer->position, lexer->width);
     break;
   }
 
-  lexer_advance(lexer); // Advance so that lexer is ready for the next call.
+  // Advance so that lexer is ready for the next call. The EOF case is handled
+  // explicitly by the advance function so it does not need special treatment
+  // here.
+  lexer_advance(lexer);
 
   return token;
 }
