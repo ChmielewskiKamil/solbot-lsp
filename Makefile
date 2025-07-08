@@ -7,7 +7,7 @@ CFLAGS ?= $(NIX_CFLAGS_COMPILE)
 
 # Output binaries
 TARGET = solbot-lsp
-TEST_RUNNER = test_runner
+TEST_RUNNER = test-runner
 
 # Define all source and header files for the unity build
 # This makes it easy to add new files later.
