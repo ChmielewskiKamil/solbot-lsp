@@ -1,10 +1,12 @@
 #include "lexer.h"
+#include <assert.h>
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 
 /**
- * Reads the next character from the lexer's input string.
+ * Reads the next character from the lexer's input string. This function DOES NOT
+ * advance the lexer position. It just reads the char that the lexer currently points to.
  *
  * NOTE (for future expansion): This is a simplified, ASCII-only implementation.
  * It assumes every character is one byte. To support full Unicode, this
@@ -15,13 +17,24 @@
  * @param lexer A pointer to the Lexer whose state will be updated.
  */
 void lexer_read_char(Lexer *lexer) {
-  // The end of the input string is marked by null terminator.
+  // The end of the input string is marked by the null terminator.
   if (*(lexer->position) == '\0') {
-    lexer->ch = 0; // EOF
+    lexer->ch = '\0';
     lexer->width = 0;
+  } else {
+    lexer->ch = *(lexer->position);
+    lexer->width = 1; // TODO: Implement proper UTF-8 decoding.
   }
+}
 
-  lexer->position += lexer->width;
+/* This function adances the position of the lexer by the width of the last read
+ * character (lexem?). After the position is updated and points at the next lexem 
+ * to read, it reads it and updates the lexer state. */
+void lexer_advance(Lexer *lexer) {
+  if (lexer->ch != '\0') {
+    lexer_read_char(lexer);
+    lexer->position += lexer->width;
+  }
 }
 
 Lexer *lexer_new(const char *input_buffer) {
@@ -40,6 +53,11 @@ Lexer *lexer_new(const char *input_buffer) {
   return lexer;
 }
 
+void lexer_free(Lexer *lexer) {
+  assert(lexer != NULL);
+  free(lexer);
+}
+
 Token *token_new(TokenType type, const char *literal_start,
                  size_t literal_length) {
   Token *token = malloc(sizeof(*token));
@@ -55,12 +73,26 @@ Token *token_new(TokenType type, const char *literal_start,
 }
 
 Token *lexer_next_token(Lexer *lexer) {
+  Token *token = NULL;
+
   switch (lexer->ch) {
   case '{':
-    return token_new(TOKEN_LBRACE, "{", 1);
+    token = token_new(TOKEN_LBRACE, lexer->position, lexer->width);
+    break;
+
+  case '}':
+    token = token_new(TOKEN_RBRACE, lexer->position, lexer->width);
+    break;
+
+  case '\0':
+    token = token_new(TOKEN_EOF, lexer->position, lexer->width);
+    break;
 
   default:
     break;
   }
-  return NULL;
+
+  lexer_advance(lexer); // Advance so that lexer is ready for the next call.
+
+  return token;
 }

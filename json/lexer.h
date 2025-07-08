@@ -3,6 +3,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+
 typedef enum {
   TOKEN_ILLEGAL, // unknown/illegal character
   TOKEN_EOF,     // end of the input string
@@ -37,6 +38,7 @@ typedef struct {
 } Lexer;
 
 Lexer *lexer_new(const char *input_buffer);
+void lexer_free(Lexer *lexer);
 Token *lexer_next_token(Lexer *lexer);
 
 #endif // JSON_LEXER_H
