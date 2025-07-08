@@ -42,8 +42,8 @@ void lexer_read_char(Lexer *lexer) {
  */
 void lexer_advance(Lexer *lexer) {
   if (lexer->ch != '\0') {
-    lexer_read_char(lexer);
     lexer->position += lexer->width;
+    lexer_read_char(lexer);
   }
 }
 
