@@ -35,8 +35,6 @@
         # ----------------------------------------------------------------------
         #  Production Compiler Flags
         # ----------------------------------------------------------------------
-        # These flags are for the final, optimized package build.
-        # No sanitizers here unless you specifically need them for release debugging.
         prodBuildFlags = [
           "-std=c99"
           "-Wall"
@@ -50,6 +48,8 @@
         # ----------------------------------------------------------------------
         #  Package Definition (for `nix build`)
         # ----------------------------------------------------------------------
+        # Note that clangStdenv is used here, not the stenv. This makes `clang`
+        # available when `make install` is called.
         packages.default = pkgs.clangStdenv.mkDerivation {
           pname = appName;
           version = "0.1.0";
@@ -80,8 +80,6 @@
             llvmPackages_latest.compiler-rt
           ];
 
-          # Set the strict compiler flags for our interactive development session
-          # This is the key for a fast feedback loop.
           NIX_CFLAGS_COMPILE = builtins.toString devBuildFlags;
 
           # Let the shell know where to find the ASan runtime library
