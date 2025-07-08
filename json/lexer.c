@@ -4,9 +4,17 @@
 #include <stdlib.h>
 #include <string.h>
 
+struct Lexer {
+  const char *input;    // The JSON string being lexed.
+  const char *position; // The current position in the JSON string.
+  uint32_t ch;          // The current character (4 byte code point).
+  uint8_t width;        // The width of the last read character in bytes.
+};
+
 /**
- * Reads the next character from the lexer's input string. This function DOES NOT
- * advance the lexer position. It just reads the char that the lexer currently points to.
+ * Reads the next character from the lexer's input string. This function DOES
+ * NOT advance the lexer position. It just reads the char that the lexer
+ * currently points to.
  *
  * NOTE (for future expansion): This is a simplified, ASCII-only implementation.
  * It assumes every character is one byte. To support full Unicode, this
@@ -28,8 +36,8 @@ void lexer_read_char(Lexer *lexer) {
 }
 
 /* This function adances the position of the lexer by the width of the last read
- * character (lexem?). After the position is updated and points at the next lexem 
- * to read, it reads it and updates the lexer state. */
+ * character (lexem?). After the position is updated and points at the next
+ * lexem to read, it reads it and updates the lexer state. */
 void lexer_advance(Lexer *lexer) {
   if (lexer->ch != '\0') {
     lexer_read_char(lexer);
