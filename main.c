@@ -9,7 +9,7 @@
 
 // --- Project Headers ---
 
-#include "json/parser.h" // For parse_request(...)
+#include "json/parser.h"
 
 // --- Unity Build ---
 
@@ -17,9 +17,9 @@
 #include "json/parser.c"
 
 /**
- * Safely appends a single message to the persistent LSP log file.
+ * @brief Safely appends a single message to the persistent LSP log file.
  *
- * WHY this function exists:
+ * @details WHY this function exists:
  * In a Language Server, stdout is reserved for protocol messages to the editor.
  * Therefore, a separate channel is needed for debugging. This function provides
  * that channel by writing to a file in /tmp, a standard location for transient
@@ -49,6 +49,8 @@ void log_message(const char *message) {
 }
 
 int main() {
+  // TODO: If we change this, the log_message function will break since it also
+  // wants this path. There should probably be some logger initialization.
   fclose(fopen("/tmp/solbot-lsp.log", "w"));
   log_message("[Info] --- Solbot LSP Started ---");
 

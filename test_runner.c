@@ -89,8 +89,6 @@ const char *token_type_to_string(TokenType type) {
 void assert_true(int condition, const char *message) {
   if (!condition) {
     fprintf(stderr, "Assertion failed: %s\n", message);
-    // In a real test, you'd increment a failure count.
-    // For this simple runner, we'll just exit.
     exit(1);
   }
 }
