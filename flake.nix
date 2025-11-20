@@ -11,6 +11,7 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
         appName = "solbot-lsp";
+        version = "0.0.1";
 
         # ----------------------------------------------------------------------
         #  Development Compiler Flags (Strict + Sanitizers)
@@ -48,11 +49,11 @@
         # ----------------------------------------------------------------------
         #  Package Definition (for `nix build`)
         # ----------------------------------------------------------------------
-        # Note that clangStdenv is used here, not the stenv. This makes `clang`
+        # Note that clangStdenv is used here, not the stdenv. This makes `clang`
         # available when `make install` is called.
         packages.default = pkgs.clangStdenv.mkDerivation {
           pname = appName;
-          version = "0.1.0";
+          version = version;
           src = ./.;
 
           # Set build flags for this package build
