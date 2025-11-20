@@ -21,8 +21,8 @@ UNITY_H_FILES = json/lexer.h json/parser.h
 ALL_DEPS = $(UNITY_C_FILES) $(UNITY_H_FILES)
 
 # Installation directories
-PREFIX ?= /usr/local
-DESTDIR ?=
+PREFIX ?= result
+DESTDIR ?=./
 
 # Use .PHONY for targets that are not files
 .PHONY: all test clean install
