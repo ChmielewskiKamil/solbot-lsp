@@ -10,6 +10,7 @@
 // --- Project Headers ---
 
 #include "json/parser.h"
+#include "lsp/dispatcher.h"
 
 // --- Unity Build ---
 
@@ -86,6 +87,7 @@ int main() {
 
     // --- Content Part
 
+    // Add +1 for null terminator.
     char *content_buffer = malloc(content_length + 1);
     if (content_buffer == NULL) {
       log_message("[Error] Could not allocate memory for content buffer.");
@@ -112,6 +114,8 @@ int main() {
       free(content_buffer);
       return 1;
     }
+
+    dispatch_message(request->method, request->id, request->params);
 
     if (strstr(content_buffer, "\"method\":\"initialize\"") != NULL) {
       const char *response = "{"

@@ -88,6 +88,9 @@ Token *token_new(TokenType type, const char *literal_start,
 Token *lexer_next_token(Lexer *lexer) {
   Token *token = NULL;
 
+  // TODO: There is a lot of repetition with the token new invocation where only
+  // the token type changes. 
+
   switch (lexer->ch) {
   case '{':
     token = token_new(TOKEN_LBRACE, lexer->position, lexer->width);

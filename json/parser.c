@@ -62,26 +62,6 @@ RequestMessage *parser_parse_request_message(const char *request_buffer) {
     return NULL;
   }
 
-  /* How do I want to implement the parsing logic?
-   * Approach 1. Giant switch similar to the lexer next token function but in
-   * an infinite loop (?). This does not make much sense because we loose
-   * context.
-   *
-   * Approach 2. Iterate in a loop until the current token is EOF. */
-
-  while (1) {
-    if (parser->tkn_current == NULL) {
-      parser_free(parser);
-      return NULL;
-    }
-
-    if (parser->tkn_current->type == TOKEN_EOF) {
-      break;
-    }
-
-    parser_next_token(parser); // Always move forward
-  }
-
   parser_free(parser);
   return request;
 }
