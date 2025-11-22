@@ -57,23 +57,16 @@ typedef struct Lexer Lexer;
 /**
  * @brief Creates a new lexer.
  * @param input_buffer The null-terminated string to be tokenized.
- * @return A pointer to a new, heap-allocated Lexer. The caller is responsible
- * for freeing it with `lexer_free(...)`.
+ * @return Lexer Returns a new stack-allocated Lexer.
  */
-Lexer *lexer_new(const char *input_buffer);
-
-/**
- * @brief Frees the memory allocated for the lexer.
- * @param lexer A pointer to the Lexer to be freed.
- */
-void lexer_free(Lexer *lexer);
+Lexer lexer_new(const char *input_buffer);
 
 /**
  * @brief Scans the input and returns the next token.
  * @param lexer A pointer to the Lexer.
- * @return A pointer to a new, heap-allocated Token. The caller is responsible
- * for freeing it. Returns a TOKEN_EOF token when the end is reached.
+ * @return Returns a Token by Value. The Token is a view into a buffer. Returns
+ * a TOKEN_EOF token when the end is reached.
  */
-Token *lexer_next_token(Lexer *lexer);
+Token lexer_next_token(Lexer *lexer);
 
 #endif // JSON_LEXER_H

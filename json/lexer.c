@@ -50,62 +50,45 @@ void lexer_advance(Lexer *lexer) {
 // TODO: For lexing strings and numbers, we will most likely need the
 // lexer_backup function.
 
-Lexer *lexer_new(const char *input_buffer) {
-  Lexer *lexer = NULL;
+Lexer lexer_new(const char *input_buffer) {
+  Lexer lexer;
 
-  lexer = malloc(sizeof(*lexer));
-  if (lexer == NULL) {
-    return NULL;
-  }
+  lexer.input = input_buffer;
+  lexer.position = input_buffer;
 
-  lexer->input = input_buffer;
-  lexer->position = input_buffer;
-
-  lexer_read_char(lexer);
+  lexer_read_char(&lexer);
 
   return lexer;
 }
 
-void lexer_free(Lexer *lexer) {
-  assert(lexer != NULL);
-  free(lexer);
-}
+Token token_new(Lexer *lexer, TokenType type) {
+  Token token;
 
-Token *token_new(TokenType type, const char *literal_start,
-                 size_t literal_length) {
-  Token *token = malloc(sizeof(*token));
-  if (token == NULL) {
-    return NULL;
-  }
-
-  token->type = type;
-  token->literal_start = literal_start;
-  token->literal_length = literal_length;
+  token.type = type;
+  token.literal_start = lexer->position;
+  token.literal_length = lexer->width;
 
   return token;
 }
 
-Token *lexer_next_token(Lexer *lexer) {
-  Token *token = NULL;
-
-  // TODO: There is a lot of repetition with the token new invocation where only
-  // the token type changes. 
+Token lexer_next_token(Lexer *lexer) {
+  Token token;
 
   switch (lexer->ch) {
   case '{':
-    token = token_new(TOKEN_LBRACE, lexer->position, lexer->width);
+    token = token_new(lexer, TOKEN_LBRACE);
     break;
 
   case '}':
-    token = token_new(TOKEN_RBRACE, lexer->position, lexer->width);
+    token = token_new(lexer, TOKEN_RBRACE);
     break;
 
   case '\0':
-    token = token_new(TOKEN_EOF, lexer->position, lexer->width);
+    token = token_new(lexer, TOKEN_EOF);
     break;
 
   default:
-    token = token_new(TOKEN_ILLEGAL, lexer->position, lexer->width);
+    token = token_new(lexer, TOKEN_ILLEGAL);
     break;
   }
 
