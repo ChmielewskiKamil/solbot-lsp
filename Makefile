@@ -14,15 +14,14 @@ TEST_RUNNER = test-runner
 MAIN_SRC = main.c
 TEST_SRC = test_runner.c
 
-UNITY_C_FILES = json/lexer.c json/parser.c
-UNITY_H_FILES = json/lexer.h json/parser.h
+UNITY_C_FILES = json/lexer.c json/parser.c lsp/dispatcher.c
+UNITY_H_FILES = json/lexer.h json/parser.h lsp/dispatcher.h
 
 # A complete list of all dependencies for any build target
 ALL_DEPS = $(UNITY_C_FILES) $(UNITY_H_FILES)
 
-# Installation directories
-PREFIX ?= result
-DESTDIR ?=./
+# Installation directory
+DESTDIR ?=./result
 
 # Use .PHONY for targets that are not files
 .PHONY: all test clean install
@@ -48,7 +47,7 @@ test: $(TEST_RUNNER)
 
 # Install the main binary. This is used by `nix build`.
 install: $(TARGET)
-	install -D $(TARGET) $(DESTDIR)$(PREFIX)/bin/$(TARGET)
+	install -D $(TARGET) $(DESTDIR)/bin/$(TARGET)
 
 # Clean up build artifacts
 clean:
