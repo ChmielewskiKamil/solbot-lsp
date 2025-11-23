@@ -1,6 +1,9 @@
-#include "lexer.h"
 #include <assert.h>
 #include <stddef.h>
+#include <stdint.h>
+
+#include "lexer.h"
+#include "libs/foundation.h"
 
 /**
  * Reads the next character from the lexer's input string. This function DOES
@@ -45,6 +48,14 @@ static void lexer_skip_whitespace(Lexer *lexer) {
   }
 }
 
+static inline bool is_digit(uint32_t ch) {
+  if (ch >= '0' && ch <= '9') {
+    return true;
+  }
+
+  return false;
+}
+
 Lexer lexer_new(const char *input_buffer) {
   Lexer lexer;
 
@@ -87,6 +98,87 @@ Token lex_string(Lexer *lexer) {
   return tkn;
 }
 
+Token lex_number(Lexer *lexer) {
+  Token tkn;
+  tkn.type = TOKEN_NUMBER;
+  tkn.literal_start = lexer->position;
+  tkn.literal_length = 0;
+
+  // Consume an optional minus sign.
+  if (lexer->ch == '-') {
+    lexer_advance(lexer);
+  }
+
+  // Unsigned integer in JSON shouldn't start with `0`. If the number starts
+  // with `0` it means we are either dealing with a float (fraction) or an
+  // exponential. Otherwise it is an invalid number.
+  if (lexer->ch == '0') {
+    lexer_advance(lexer); // Consume `0` digit.
+
+    // Digits after `0` are not allowed e.g. `09` is invalid.
+    if (is_digit(lexer->ch)) {
+      tkn.type = TOKEN_ILLEGAL;
+      tkn.literal_length = (size_t)(lexer->position - tkn.literal_start);
+      return tkn;
+    }
+  } else {
+    // The only way to land in this case is when there was a minus sign before.
+    // The minus sign has to be followed by a digit. Otherwise the number is
+    // invalid.
+    if (!is_digit(lexer->ch)) {
+      tkn.type = TOKEN_ILLEGAL;
+      tkn.literal_length = (size_t)(lexer->position - tkn.literal_start);
+      return tkn;
+    }
+
+    while (is_digit(lexer->ch)) {
+      lexer_advance(lexer);
+    }
+  }
+
+  // We are dealing with a fraction (floating point number).
+  if (lexer->ch == '.') {
+    lexer_advance(lexer); // Consume the `.` (dot) char.
+
+    // After the dot there has to be at least one digit.
+    if (!is_digit(lexer->ch)) {
+      tkn.type = TOKEN_ILLEGAL;
+      tkn.literal_length = (size_t)(lexer->position - tkn.literal_start);
+      return tkn;
+    }
+
+    while (is_digit(lexer->ch)) {
+      lexer_advance(lexer);
+    }
+  }
+
+  // The number has an exponent part.
+  if (lexer->ch == 'e' || lexer->ch == 'E') {
+    lexer_advance(lexer);
+
+    // After the exponent 'e' or 'E' char there can be an optional '+' or '-'
+    // sign.
+    if (lexer->ch == '-' || lexer->ch == '+') {
+      lexer_advance(lexer);
+    }
+
+    // The only thing that can be present after the exponent char (and/or the
+    // sign) is a digit.
+    if (!is_digit(lexer->ch)) {
+      tkn.type = TOKEN_ILLEGAL;
+      tkn.literal_length = (size_t)(lexer->position - tkn.literal_start);
+      return tkn;
+    }
+
+    while (is_digit(lexer->ch)) {
+      lexer_advance(lexer);
+    }
+  }
+
+  tkn.literal_length = (size_t)(lexer->position - tkn.literal_start);
+  return tkn;
+}
+
 Token lexer_next_token(Lexer *lexer) {
   lexer_skip_whitespace(lexer);
 
@@ -122,8 +214,7 @@ Token lexer_next_token(Lexer *lexer) {
     break;
 
   case '"':
-    token = lex_string(lexer);
-    return token;
+    return lex_string(lexer);
 
   case '\0':
     token.type = TOKEN_EOF;
@@ -131,6 +222,11 @@ Token lexer_next_token(Lexer *lexer) {
     break;
 
   default:
+
+    if (is_digit((lexer->ch)) || lexer->ch == '-') {
+      return lex_number(lexer);
+    }
+
     token.type = TOKEN_ILLEGAL;
     token.literal_length = lexer->width; // handles illegal multi byte chars if
                                          // UTF8 support is ever added.
