@@ -1,15 +1,6 @@
 #include "lexer.h"
 #include <assert.h>
 #include <stddef.h>
-#include <stdlib.h>
-#include <string.h>
-
-struct Lexer {
-  const char *input;    // The JSON string being lexed.
-  const char *position; // The current position in the JSON string.
-  uint32_t ch;          // The current character (4 byte code point).
-  uint8_t width;        // The width of the last read character in bytes.
-};
 
 /**
  * Reads the next character from the lexer's input string. This function DOES
@@ -24,7 +15,7 @@ struct Lexer {
  *
  * @param lexer A pointer to the Lexer whose state will be updated.
  */
-void lexer_read_char(Lexer *lexer) {
+static void lexer_read_char(Lexer *lexer) {
   // The end of the input string is marked by the null terminator.
   if (*(lexer->position) == '\0') {
     lexer->ch = '\0';
@@ -40,15 +31,19 @@ void lexer_read_char(Lexer *lexer) {
  *
  * @param lexer A pointer to the Lexer whose state will be advanced.
  */
-void lexer_advance(Lexer *lexer) {
+static void lexer_advance(Lexer *lexer) {
   if (lexer->ch != '\0') {
     lexer->position += lexer->width;
     lexer_read_char(lexer);
   }
 }
 
-// TODO: For lexing strings and numbers, we will most likely need the
-// lexer_backup function.
+static void lexer_skip_whitespace(Lexer *lexer) {
+  while (lexer->ch == ' ' || lexer->ch == '\n' || lexer->ch == '\t' ||
+         lexer->ch == '\r') {
+    lexer_advance(lexer);
+  }
+}
 
 Lexer lexer_new(const char *input_buffer) {
   Lexer lexer;
@@ -61,41 +56,87 @@ Lexer lexer_new(const char *input_buffer) {
   return lexer;
 }
 
-Token token_new(Lexer *lexer, TokenType type) {
-  Token token;
+Token lex_string(Lexer *lexer) {
+  Token tkn;
+  tkn.type = TOKEN_STRING;
+  tkn.literal_start = lexer->position;
 
-  token.type = type;
-  token.literal_start = lexer->position;
-  token.literal_length = lexer->width;
+  lexer_advance(lexer); // Move past the opening quotation mark.
 
-  return token;
+  while (lexer->ch != '"' && lexer->ch != '\0') {
+    // We encountered an escaped character e.g. \", \n or \0 (there are others
+    // too). Most of those we can skip, only \0 requires special treatment.
+    if (lexer->ch == '\\') {
+      lexer_advance(lexer); // Move past the backslash.
+
+      if (lexer->ch != '\0') {
+        lexer_advance(lexer); // Move past the char e.g. n, t, r.
+      }
+
+      continue;
+    }
+
+    lexer_advance(lexer); // Consume string content.
+  }
+
+  if (lexer->ch == '"') {
+    lexer_advance(lexer);
+    tkn.literal_length = (size_t)(lexer->position - tkn.literal_start);
+  }
+
+  return tkn;
 }
 
 Token lexer_next_token(Lexer *lexer) {
+  lexer_skip_whitespace(lexer);
+
   Token token;
+  // Default initialization
+  token.literal_start = lexer->position;
+  token.literal_length = 1;
+
+  // IMPORTANT: The pattern followed in the lexer_next_token function is that
+  // each case in the switch statement advances the lexer position in such a way
+  // that at the end of execution, the lexer is sitting on the next thing to be
+  // processed.
 
   switch (lexer->ch) {
   case '{':
-    token = token_new(lexer, TOKEN_LBRACE);
+    token.type = TOKEN_LBRACE;
+    lexer_advance(lexer);
     break;
 
   case '}':
-    token = token_new(lexer, TOKEN_RBRACE);
+    token.type = TOKEN_RBRACE;
+    lexer_advance(lexer);
     break;
 
+  case ',':
+    token.type = TOKEN_COMMA;
+    lexer_advance(lexer);
+    break;
+
+  case ':':
+    token.type = TOKEN_COLON;
+    lexer_advance(lexer);
+    break;
+
+  case '"':
+    token = lex_string(lexer);
+    return token;
+
   case '\0':
-    token = token_new(lexer, TOKEN_EOF);
+    token.type = TOKEN_EOF;
+    token.literal_length = 0;
     break;
 
   default:
-    token = token_new(lexer, TOKEN_ILLEGAL);
+    token.type = TOKEN_ILLEGAL;
+    token.literal_length = lexer->width; // handles illegal multi byte chars if
+                                         // UTF8 support is ever added.
+    lexer_advance(lexer);
     break;
   }
-
-  // Advance so that lexer is ready for the next call. The EOF case is handled
-  // explicitly by the advance function so it does not need special treatment
-  // here.
-  lexer_advance(lexer);
 
   return token;
 }

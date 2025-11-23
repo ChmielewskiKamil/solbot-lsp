@@ -1,156 +1,164 @@
-#include "json/lexer.h"
+#include <foundation.h>
+#include <json/parser.h>
 #include <stdio.h>
+#include <stdlib.h>
 
-// Forward declaration of test case functions.
-int test_lexer_simple_tokens(void);
-int test_parser_handles_empty_input(void);
-
-// A simple struct to hold test results
-typedef struct {
-  int passed;
-  int failed;
-} TestStats;
-
-// A helper function that runs a single test case.
-void run_test(int (*test_function)(void), const char *test_name,
-              TestStats *stats) {
-  printf("--- Running: %s ---\n", test_name);
-
-  // Call the test and check if it passed or failed.
-  if (test_function()) {
-    printf("--- \033[38;2;50;255;50mPassed\033[0m: %s ---\n\n", test_name);
-    stats->passed++;
-  } else {
-    // The assertion already printed the detailed error.
-    printf("--- \033[38;2;255;50;50mFailed\033[0m: %s ---\n\n", test_name);
-    stats->failed++;
-  }
-}
-
-int main(void) {
-  TestStats stats = {0, 0};
-
-  printf("========= Starting Tests =========\n\n");
-
-  run_test(test_lexer_simple_tokens, "test_lexer_simple_tokens", &stats);
-  run_test(test_parser_handles_empty_input, "test_parser_handles_empty_input",
-           &stats);
-
-  printf("========== Test Summary ==========\n");
-  printf("Passed: %d, Failed: %d\n", stats.passed, stats.failed);
-  printf("==================================\n");
-
-  return stats.failed > 0 ? 1 : 0;
-}
-
-// --- Include C files to be tested ---
+// --- Project Includes (Unity Build Style) ---
+// We include the .c files directly so we can test static functions if needed
 #include "json/lexer.c"
 #include "json/parser.c"
 
-// --- Test Helpers ---
+// ==============================================================================
+// 1. THE TESTING FRAMEWORK (The Engine)
+// ==============================================================================
 
-// Converts a TokenType enum to a string for readable test output.
-const char *token_type_to_string(TokenType type) {
-  switch (type) {
-  case TOKEN_ILLEGAL:
-    return "TOKEN_ILLEGAL";
-  case TOKEN_EOF:
-    return "TOKEN_EOF";
-  case TOKEN_LBRACE:
-    return "TOKEN_LBRACE";
-  case TOKEN_RBRACE:
-    return "TOKEN_RBRACE";
-  case TOKEN_LBRACKET:
-    return "TOKEN_LBRACKET";
-  case TOKEN_RBRACKET:
-    return "TOKEN_RBRACKET";
-  case TOKEN_COMMA:
-    return "TOKEN_COMMA";
-  case TOKEN_COLON:
-    return "TOKEN_COLON";
-  case TOKEN_STRING:
-    return "TOKEN_STRING";
-  case TOKEN_NUMBER:
-    return "TOKEN_NUMBER";
-  case TOKEN_TRUE:
-    return "TOKEN_TRUE";
-  case TOKEN_FALSE:
-    return "TOKEN_FALSE";
-  case TOKEN_NULL:
-    return "TOKEN_NULL";
-  default:
-    return "UNKNOWN_TOKEN";
-  }
+typedef struct {
+    int passed;
+    int failed;
+} TestStats;
+
+// Helper to convert TokenType to string
+const char *token_type_str(TokenType type) {
+    switch (type) {
+        case TOKEN_ILLEGAL: return "ILLEGAL";
+        case TOKEN_EOF:     return "EOF";
+        case TOKEN_LBRACE:  return "LBRACE";
+        case TOKEN_RBRACE:  return "RBRACE";
+        case TOKEN_LBRACKET: return "LBRACKET";
+        case TOKEN_RBRACKET: return "RBRACKET";
+        case TOKEN_COMMA:   return "COMMA";
+        case TOKEN_COLON:   return "COLON";
+        case TOKEN_STRING:  return "STRING";
+        case TOKEN_NUMBER:  return "NUMBER";
+        case TOKEN_TRUE:    return "TRUE";
+        case TOKEN_FALSE:   return "FALSE";
+        case TOKEN_NULL:    return "NULL";
+        default:            return "UNKNOWN";
+    }
 }
 
-// --- Assertion Helpers ---
+// --- ASSERTION MACROS ---
 
-// A basic assert to check conditions in tests.
-void assert_true(int condition, const char *message) {
-  if (!condition) {
-    fprintf(stderr, "Assertion failed: %s\n", message);
-    exit(1);
-  }
-}
-
-// Returns 1 on success, 0 on failure.
-int assert_token_type(TokenType expected, TokenType actual, int test_case_num) {
-  if (expected == actual) {
-    return 1; // Success
-  }
-
-  fprintf(stderr, "[Test Case %d] Assertion Failed: Expected %s, but got %s.\n",
-          test_case_num, token_type_to_string(expected),
-          token_type_to_string(actual));
-
-  return 0; // Failure
-}
-
-// --- Test Implementations ---
-
-int test_lexer_simple_tokens(void) {
-  const char *input = "{}true,false,null:";
-  int success = 1; // Assume the test will pass
-
-  struct TestCase {
-    TokenType expected_type;
-  } tests[] = {
-      {TOKEN_LBRACE}, {TOKEN_RBRACE}, {TOKEN_TRUE}, {TOKEN_FALSE},
-      {TOKEN_NULL},   {TOKEN_COLON},  {TOKEN_EOF},
-  };
-
-  Lexer *lexer = lexer_new(input);
-  int num_tests = sizeof(tests) / sizeof(tests[0]);
-
-  for (int i = 0; i < num_tests; i++) {
-    Token *tok = lexer_next_token(lexer);
-
-    // Check if the assertion failed.
-    if (!assert_token_type(tests[i].expected_type, tok->type, i + 1)) {
-      success = 0; // Mark the test as failed.
-      free(tok);   // Free the token that caused the failure.
-      break;       // Exit the test loop.
+#define ASSERT_TRUE(condition, msg) \
+    if (!(condition)) { \
+        fprintf(stderr, "    [ASSERT FAILED] %s:%d: %s\n", __FILE__, __LINE__, msg); \
+        return 0; \
     }
 
-    free(tok);
-  }
+#define ASSERT_TOKEN(expected, actual) \
+    if ((expected) != (actual)) { \
+        fprintf(stderr, "    [ASSERT FAILED] %s:%d: Expected %s, got %s\n", \
+                __FILE__, __LINE__, token_type_str(expected), token_type_str(actual)); \
+        return 0; \
+    }
 
-  lexer_free(lexer);
+#define ASSERT_NOT_NULL(ptr, msg) \
+    if ((ptr) == NULL) { \
+        fprintf(stderr, "    [ASSERT FAILED] %s:%d: %s\n", __FILE__, __LINE__, msg); \
+        return 0; \
+    }
 
-  return success; // Return the final status.
+#define ASSERT_NULL(ptr, msg) \
+    if ((ptr) != NULL) { \
+        fprintf(stderr, "    [ASSERT FAILED] %s:%d: %s\n", __FILE__, __LINE__, msg); \
+        return 0; \
+    }
+
+// --- RUNNER MACROS ---
+
+// The internal runner function
+void run_test_internal(int (*test_func)(void), const char *name, TestStats *stats) {
+    printf("--- Running: %s ---\n", name);
+    
+    if (test_func()) {
+        printf("--- \033[38;2;50;255;50mPassed\033[0m: %s ---\n\n", name); // Green
+        stats->passed++;
+    } else {
+        printf("--- \033[38;2;255;50;50mFailed\033[0m: %s ---\n\n", name); // Red
+        stats->failed++;
+    }
 }
 
-int test_parser_handles_empty_input(void) {
-  const char *input = "";
-  RequestMessage *req = parser_parse_request_message(input);
+// #func turns the function name into a string literal automatically
+#define RUN_TEST(func) run_test_internal(func, #func, &stats)
 
-  if (req == NULL) {
-    fprintf(stderr, "Assertion Failed: parser_parse_request_message returned "
-                    "NULL on empty input.\n");
-    return 0; // Failure
-  }
 
-  // If we reach here, the test passed.
-  free(req);
-  return 1; // Success
+// ==============================================================================
+// 2. THE TEST CASES
+// ==============================================================================
+
+int test_lexer_simple_tokens(void) {
+    // Note the double backslash to actually put a backslash in the C-string
+    const char *input = "{} \"hello\" \"hello with quote \\\"mark \"";
+    
+    struct TestCase { TokenType expected; } tests[] = {
+        {TOKEN_LBRACE}, {TOKEN_RBRACE}, {TOKEN_STRING}, {TOKEN_STRING}, {TOKEN_EOF},
+    };
+
+    Lexer lexer = lexer_new(input);
+    int num_tests = sizeof(tests) / sizeof(tests[0]);
+
+    for (int i = 0; i < num_tests; i++) {
+        Token tok = lexer_next_token(&lexer);
+        ASSERT_TOKEN(tests[i].expected, tok.type);
+    }
+
+    return 1; // Success
+}
+
+int test_parser_returns_null_on_empty_input(void) {
+    const char *input = " "; // Whitespace only
+    RequestMessage *req = parser_parse_request_message(input);
+    
+    // Check Result
+    ASSERT_NULL(req, "Parser should return NULL on empty/whitespace input");
+    
+    return 1;
+}
+
+int test_parser_handles_method_parsing(void) {
+    const char *input = "{\"method\": \"initialize\"}";
+    RequestMessage *req = parser_parse_request_message(input);
+
+    ASSERT_NOT_NULL(req, "Parser returned NULL on valid input");
+    ASSERT_TRUE(req->method.string_length > 0, "Method should be parsed");
+
+    fdn_string expected_method_name = fdn_string_create_view("initialize", 10);
+
+    ASSERT_TRUE(fdn_string_is_eq(req->method, expected_method_name), "Method name mismatch.");
+    
+    free(req);
+    return 1;
+}
+
+int test_parser_handles_id_parsing(void) {
+    const char *input = "{\"id\": 10 }";
+    RequestMessage *req = parser_parse_request_message(input);
+    ASSERT_NOT_NULL(req, "Parser returned NULL on valid input");
+
+    ASSERT_TRUE(req->id == 10, "Request message ID mismatch.");
+
+    free(req);
+    return 1;
+}
+
+// ==============================================================================
+// 3. MAIN ENTRY POINT
+// ==============================================================================
+
+int main(void) {
+    TestStats stats = {0, 0};
+
+    printf("========= Starting Tests =========\n\n");
+
+    RUN_TEST(test_lexer_simple_tokens);
+    RUN_TEST(test_parser_returns_null_on_empty_input);
+    RUN_TEST(test_parser_handles_method_parsing);
+    RUN_TEST(test_parser_handles_id_parsing);
+
+    printf("========== Test Summary ==========\n");
+    printf("Passed: %d, Failed: %d\n", stats.passed, stats.failed);
+    printf("==================================\n");
+
+    return stats.failed > 0 ? 1 : 0;
 }

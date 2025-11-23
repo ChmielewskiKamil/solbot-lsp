@@ -34,6 +34,13 @@ typedef enum {
   TOKEN_NULL,   // null
 } TokenType;
 
+struct Lexer {
+  const char *input;    // The JSON string being lexed.
+  const char *position; // The current position in the JSON string.
+  uint32_t ch;          // The current character (4 byte code point).
+  uint8_t width;        // The width of the last read character in bytes.
+};
+
 /**
  * @struct Token
  * @brief Represents a single lexical unit identified by the lexer.
