@@ -15,7 +15,7 @@ MAIN_SRC = main.c
 TEST_SRC = test_runner.c
 
 UNITY_C_FILES = json/lexer.c json/parser.c lsp/dispatcher.c
-UNITY_H_FILES = json/lexer.h json/parser.h lsp/dispatcher.h
+UNITY_H_FILES = json/lexer.h json/parser.h lsp/dispatcher.h libs/foundation.h
 
 # A complete list of all dependencies for any build target
 ALL_DEPS = $(UNITY_C_FILES) $(UNITY_H_FILES)
