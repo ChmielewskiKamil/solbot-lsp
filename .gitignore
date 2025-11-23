@@ -4,3 +4,7 @@ result
 solbot-lsp
 # Result of 'make test'
 test-runner
+# Bear output for clangd
+compile_commands.json
+# Clangd cache
+.cache/
