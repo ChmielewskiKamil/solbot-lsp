@@ -8,12 +8,18 @@
 #include <string.h>
 
 // --- Project Headers ---
+// Ensure that all declarations are known before the implementation 'c' files
+// are compiled for the unity build.
 
-#include "json/parser.h"
+#include "libs/foundation.h" // the "Base Layer"; custom standard library
+#define FDN_IMPLEMENTATION
+
 #include "lsp/dispatcher.h"
+#include "json/parser.h"
 
 // --- Unity Build ---
 
+#include "lsp/dispatcher.c"
 #include "json/lexer.c"
 #include "json/parser.c"
 
@@ -49,7 +55,7 @@ void log_message(const char *message) {
   }
 }
 
-int main() {
+int main(void) {
   // TODO: If we change this, the log_message function will break since it also
   // wants this path. There should probably be some logger initialization.
   fclose(fopen("/tmp/solbot-lsp.log", "w"));
@@ -117,41 +123,13 @@ int main() {
 
     dispatch_message(request->method, request->id, request->params);
 
-    if (strstr(content_buffer, "\"method\":\"initialize\"") != NULL) {
-      const char *response = "{"
-                             "\"jsonrpc\": \"2.0\","
-                             "\"id\": 1,"
-                             "\"result\": {"
-                             "  \"capabilities\": {}"
-                             "}"
-                             "}";
-
-      printf("Content-Length: %zu\r\n", strlen(response));
-      printf("\r\n");
-      printf("%s", response);
-      fflush(stdout);
-
-      log_message("[Info] --- Sent 'initialize' Response ---");
-    }
-
-    if (strstr(content_buffer, "\"method\":\"shutdown\"") != NULL) {
-      const char *response = "{"
-                             "\"jsonrpc\": \"2.0\","
-                             "\"id\": 2,"
-                             "\"result\":null"
-                             "}";
-
-      printf("Content-Length: %zu\r\n", strlen(response));
-      printf("\r\n");
-      printf("%s", response);
-      fflush(stdout);
-    }
-
     if (strstr(content_buffer, "\"method\":\"exit\"") != NULL) {
+      free(request);
       free(content_buffer);
       return 0;
     }
 
+    free(request);
     free(content_buffer);
   }
 

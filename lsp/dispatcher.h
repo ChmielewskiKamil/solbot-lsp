@@ -3,7 +3,9 @@
 
 #include <stdint.h>
 
-typedef void (*LspHandler) (int32_t id, const char *params);
+#include "libs/foundation.h"
+
+typedef void (*LspHandler) (int32_t id, fdn_string params);
 
 typedef struct {
     const char *method;
@@ -12,6 +14,6 @@ typedef struct {
 
 extern dispatch_entry_t dispatch_table[];
 
-void dispatch_message(const char *method, int32_t id, const char *params);
+void dispatch_message(fdn_string method, int32_t id, fdn_string params);
 
 #endif // LSP_DISPATCHER_H
