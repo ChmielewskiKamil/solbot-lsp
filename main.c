@@ -56,10 +56,14 @@ void log_message(const char *message) {
 }
 
 int main(void) {
-  // TODO: If we change this, the log_message function will break since it also
-  // wants this path. There should probably be some logger initialization.
-  fclose(fopen("/tmp/solbot-lsp.log", "w"));
-  log_message("[Info] --- Solbot LSP Started ---");
+  FILE *log_file = fopen("/tmp/solbot-lsp.log", "w");
+  if (log_file == NULL) {
+    return 1;
+  }
+
+  fdn_log_init(log_file);
+
+  fdn_info("--- Solbot LSP Started ---");
 
   char *separator = "\r\n";
   char line_buffer[1024];
@@ -76,18 +80,15 @@ int main(void) {
         sprintf(content_len_log,
                 "[Info] Found content section length header; len: %" PRIu32,
                 content_length);
-        log_message(content_len_log);
       }
 
       if (strcmp(line_buffer, separator) == 0) {
-        log_message("[Info] --- Headers Received ---");
         break;
       }
     }
 
     if (content_length == 0) {
       // TODO: Can client -> server notifications have 0 length?
-      log_message("[Info] Content section length in the header is 0.");
       return 1;
     }
 
@@ -96,7 +97,6 @@ int main(void) {
     // Add +1 for null terminator.
     char *content_buffer = malloc(content_length + 1);
     if (content_buffer == NULL) {
-      log_message("[Error] Could not allocate memory for content buffer.");
       return 1;
     }
 
@@ -104,22 +104,22 @@ int main(void) {
         fread(content_buffer, sizeof(char), content_length, stdin);
 
     if (bytes_read != content_length) {
-      log_message("[Error] Could not read full message body.");
       free(content_buffer);
       return 1;
     }
 
     content_buffer[content_length] = '\0'; // 'fread' does not null-terminate
 
-    log_message(content_buffer);
-    log_message("[Info] --- Content Received ---");
+    fdn_info("Raw request message: %s", content_buffer);
 
     RequestMessage *request = parser_parse_request_message(content_buffer);
     if (request == NULL) {
-      log_message("The parsed request message is NULL");
       free(content_buffer);
       return 1;
     }
+
+    fdn_info("Dispatching method: %.*s", (int)request->method.string_length,
+             request->method.string_start);
 
     lsp_status status = dispatch_message(request->method, request->has_id,
                                          request->id, request->params);
@@ -128,6 +128,7 @@ int main(void) {
     free(content_buffer);
 
     if (status == LSP_STATUS_EXIT) {
+      fdn_info("Exit signal received. Shutting down.");
       break;
     }
   }
