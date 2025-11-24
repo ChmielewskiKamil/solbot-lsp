@@ -121,16 +121,15 @@ int main(void) {
       return 1;
     }
 
-    dispatch_message(request->method, request->id, request->params);
-
-    if (strstr(content_buffer, "\"method\":\"exit\"") != NULL) {
-      free(request);
-      free(content_buffer);
-      return 0;
-    }
+    lsp_status status = dispatch_message(request->method, request->has_id,
+                                         request->id, request->params);
 
     free(request);
     free(content_buffer);
+
+    if (status == LSP_STATUS_EXIT) {
+      break;
+    }
   }
 
   return 0;
