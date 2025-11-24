@@ -86,11 +86,14 @@
 
             # Runtime dependency for AddressSanitizer
             llvmPackages_latest.compiler-rt
-            
+
             # Clangd needs to know the build flags used, otherwise we will have
             # missing #include errors. Bear is the tool to generate the compile_commands.json
             # file which provdies clangd with this info.
-            bear 
+            bear
+
+            man-pages # Contains Section 3 (C Library) & Section 2 (System Calls)
+            man-pages-posix # Contains the strict POSIX definitions (Section 3p)
           ];
 
           NIX_CFLAGS_COMPILE = builtins.toString devBuildFlags;
@@ -98,7 +101,7 @@
           # Let the shell know where to find the ASan runtime library
           LD_LIBRARY_PATH = "${pkgs.llvmPackages_latest.compiler-rt}/lib";
 
-          # This environment variable tells clangd: "It is safe to ask 
+          # This environment variable tells clangd: "It is safe to ask
           # the clang compiler in the Nix store where the headers are."
           # This removes the need for a .clangd config file.
           env.CLANGD_FLAGS = "--query-driver=${pkgs.lib.getExe pkgs.llvmPackages_latest.clang}";
@@ -106,7 +109,7 @@
           shellHook = ''
             # 1. Define the shortcut for later use
             alias gen-lsp="make clean && bear -- make"
-            
+
             # 2. Run the command explicitly right now
             echo "⚙️  Auto-generating LSP config..."
             make clean && bear -- make
