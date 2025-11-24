@@ -133,8 +133,8 @@ RequestMessage *parser_parse_request_message(const char *request_buffer) {
 
       if (token.type == TOKEN_NUMBER) {
         request->id = (int32_t)(strtol(token.literal_start, NULL, 10));
-        request->isNotification = 0; // Notifications don't have IDs; we are
-                                     // dealing with a request message.
+        request->has_id = true; // Notifications don't have IDs; we are
+                                // dealing with a request message.
       }
       // TODO: Handle IDs that are strings
     } else if (is_params) {
